@@ -38,7 +38,10 @@ export const useBookingStore = defineStore('booking', () => {
   const confirmError = ref('')
   const alternatives = ref<TimeSlotSuggestion[]>([])
   const submitting = ref(false)
-  const accountPassword = ref('')
+  const channel = ref<'email' | 'phone'>('email')
+  const ticket = ref('')
+  const codeHint = ref('')
+  const code = ref('')
   let holdPersistence = false
 
   watch([step, draft], () => {
@@ -59,7 +62,10 @@ export const useBookingStore = defineStore('booking', () => {
   function resetDraft() {
     holdPersistence = true
     draft.value = createEmptyDraft()
-    accountPassword.value = ''
+    channel.value = 'email'
+    ticket.value = ''
+    codeHint.value = ''
+    code.value = ''
     step.value = 1
     clearFeedback()
     try {
@@ -70,5 +76,5 @@ export const useBookingStore = defineStore('booking', () => {
     holdPersistence = false
   }
 
-  return { step, draft, errors, confirmError, alternatives, submitting, accountPassword, clearFeedback, resetDraft }
+  return { step, draft, errors, confirmError, alternatives, submitting, channel, ticket, codeHint, code, clearFeedback, resetDraft }
 })

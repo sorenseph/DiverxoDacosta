@@ -1,84 +1,75 @@
-import { ensureAccount, currentUser } from '@/services/account'
+import { seedReservations } from '@/data/seed'
 import { appDemoStore, quotesService, reservationsService } from '@/services/browserRepository'
-import { loadBusySlots, pushQuote, pushReservation } from '@/services/cloudSync'
+import { quoteEvent } from '@/services/pricingService'
+import { getSpaceById } from '@/services/spacesService'
+import { loadBusySlots, loadClosures, pushQuote, pushReservation } from '@/services/cloudSync'
 import { sendMail } from '@/services/mailClient'
 import type { QuoteInput } from '@/services/quotesService'
 import type { ConfirmOutcome } from '@/services/reservationsService'
 import { cloudEnabled } from '@/services/supabase'
-import type { BookingDraft } from '@/types/domain'
-import { formatLongDate, formatTimeRange } from '@/utils/money'
-import { reservationSpaceName } from '@/utils/reservationText'
+import type { BookingDraft, DateClosure, Reservation } from '@/types/domain'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+
+const seedIds = new Set(seedReservations.map((item) => item.id))
 
 export type ConfirmResult = ConfirmOutcome & { notice?: string }
 
 export const useDemoStore = defineStore('demo', () => {
   const reservations = ref(reservationsService.list())
   const quotes = ref(quotesService.list())
+  const closures = ref<DateClosure[]>(appDemoStore.read().closures ?? [])
 
   function refresh() {
-    reservations.value = reservationsService.list()
-    quotes.value = quotesService.list()
-  }
-
-  function dropReservation(id: string) {
     const database = appDemoStore.read()
-    appDemoStore.write({
-      ...database,
-      reservations: database.reservations.filter((item) => item.id !== id),
-    })
+    reservations.value = database.reservations
+    quotes.value = database.quotes
+    closures.value = database.closures ?? []
   }
 
-  async function confirm(draft: BookingDraft, password = ''): Promise<ConfirmResult> {
-    const result = reservationsService.confirm(draft)
-    if (!result.ok || !cloudEnabled) {
-      refresh()
-      return result
-    }
-    const account = await ensureAccount(result.reservation.client.email, password, result.reservation.client.fullName)
-    if (!account.ok) {
-      dropReservation(result.reservation.id)
-      refresh()
-      return { ok: false, message: account.message, availability: null }
-    }
-    const saved = await pushReservation(result.reservation, account.userId)
-    if (saved) {
-      dropReservation(result.reservation.id)
-      refresh()
-      return { ok: false, message: saved, availability: null }
-    }
-    const mailed = await sendMail({
-      kind: 'reservacion',
-      to: result.reservation.client.email,
-      name: result.reservation.client.fullName,
-      folio: result.reservation.folio,
-      space: reservationSpaceName(result.reservation),
-      when: `${formatLongDate(result.reservation.date)} · ${formatTimeRange(result.reservation.startTime, result.reservation.endTime)}`,
-      guests: result.reservation.guests,
-      lines: result.reservation.pricing.lines,
-      totalMxn: result.reservation.pricing.totalMxn,
+  async function sendBookingCode(draft: BookingDraft, channel: 'email' | 'phone'): Promise<{ ok: true; ticket: string; hint: string } | { ok: false; message: string }> {
+    const space = getSpaceById(draft.spaceId)
+    const pricing = space && draft.guests
+      ? quoteEvent({ space, guests: draft.guests, startTime: draft.startTime, endTime: draft.endTime, addons: draft.addons })
+      : null
+    const response = await fetch('/api/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'send', purpose: 'booking', channel, draft, pricing }),
     })
+    const body = await response.json() as { ok?: boolean; ticket?: string; hint?: string; error?: string }
+    if (!response.ok || !body.ticket) return { ok: false, message: body.error ?? 'No se pudo enviar el código.' }
+    return { ok: true, ticket: body.ticket, hint: body.hint ?? '' }
+  }
+
+  async function confirm(ticket: string, code: string): Promise<ConfirmResult> {
+    const response = await fetch('/api/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'confirm', purpose: 'booking', ticket, code }),
+    })
+    const body = await response.json() as { reservation?: Reservation; notice?: string; error?: string }
+    if (!response.ok || !body.reservation) {
+      refresh()
+      return { ok: false, message: body.error ?? 'No se pudo confirmar el código.', availability: null }
+    }
+    const saved = reservationsService.remember(body.reservation)
     refresh()
-    return mailed
-      ? { ...result, notice: 'La reservación quedó guardada. El correo no salió: hay que verificar el dominio del remitente en Resend.' }
-      : result
+    if (!saved.ok) return saved
+    return { ...saved, notice: body.notice || undefined }
   }
 
   async function cancel(id: string) {
     const current = reservationsService.list().find((item) => item.id === id)
     const result = reservationsService.cancel(id)
-    if (result && cloudEnabled) {
-      const user = await currentUser()
-      await pushReservation(result, user?.id ?? null)
-      if (user && current && current.client.email.toLowerCase() === user.email.toLowerCase()) {
-        await sendMail({
-          kind: 'cancelacion',
-          to: current.client.email,
-          name: current.client.fullName,
-          folio: current.folio,
-        })
-      }
+    if (result && cloudEnabled) await pushReservation(result, null)
+    if (result && current && !seedIds.has(current.id)) {
+      await sendMail({
+        kind: 'cancelacion',
+        to: current.client.email,
+        name: current.client.fullName,
+        folio: current.folio,
+      })
     }
     refresh()
     return result
@@ -92,8 +83,7 @@ export const useDemoStore = defineStore('demo', () => {
     }
     let notice = ''
     if (cloudEnabled) {
-      const user = await currentUser()
-      const saved = await pushQuote(result.quote, user?.id ?? null)
+      const saved = await pushQuote(result.quote, null)
       if (saved) notice = saved
       const mailed = await sendMail({
         kind: 'cotizacion',
@@ -109,13 +99,19 @@ export const useDemoStore = defineStore('demo', () => {
 
   async function hydrateFromCloud() {
     if (!cloudEnabled) return
-    const remote = await loadBusySlots()
+    const [remote, remoteClosures] = await Promise.all([loadBusySlots(), loadClosures()])
     const database = appDemoStore.read()
     const byId = new Map(database.reservations.map((item) => [item.id, item]))
     for (const slot of remote) {
       if (!byId.has(slot.id)) byId.set(slot.id, slot)
     }
-    appDemoStore.write({ ...database, reservations: [...byId.values()] })
+    const closureById = new Map((database.closures ?? []).map((item) => [item.id, item]))
+    for (const item of remoteClosures) closureById.set(item.id, item)
+    appDemoStore.write({
+      ...database,
+      reservations: [...byId.values()],
+      closures: [...closureById.values()],
+    })
     refresh()
   }
 
@@ -124,5 +120,5 @@ export const useDemoStore = defineStore('demo', () => {
     refresh()
   }
 
-  return { reservations, quotes, refresh, confirm, cancel, submitQuote, resetDemo, hydrateFromCloud }
+  return { reservations, quotes, closures, refresh, sendBookingCode, confirm, cancel, submitQuote, resetDemo, hydrateFromCloud }
 })

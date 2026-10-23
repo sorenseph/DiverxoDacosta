@@ -16,7 +16,9 @@ En el proyecto de Vercel hay que definir, sin subirlas al repositorio:
 - `RESEND_API_KEY`
 - `RESEND_FROM`
 
-El esquema de usuarios, reservaciones y cotizaciones está en `supabase/migrations`. Hay que ejecutarlo en el editor SQL de Supabase antes de guardar reservaciones reales. Las tablas usan el prefijo `diverxo_` para no mezclarse con otras del mismo proyecto.
+El esquema de reservaciones, cotizaciones y fechas cerradas está en `supabase/migrations`. Hay que ejecutarlo en el editor SQL de Supabase. Las tablas usan el prefijo `diverxo_`.
+
+La reservación se confirma con un código de 6 dígitos al correo o al teléfono. Ese código es solo para quien reserva. El panel `/admin` entra con `ADMIN_USERNAME` y `ADMIN_PASSWORD`. Desde ahí se crean las cuentas del equipo, que entra en `/equipo`. El teléfono usa SMS cuando existen `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` y `TWILIO_FROM`.
 
 Resend no acepta `gmail.com` como dominio del remitente hasta verificar un dominio propio en [resend.com/domains](https://resend.com/domains). Mientras tanto, si ese envío falla, el servidor reintenta con el remitente de prueba `onboarding@resend.dev` y deja `reply_to` en israelcardenas6@gmail.com. Ese remitente de prueba solo entrega al correo de la cuenta de Resend.
 

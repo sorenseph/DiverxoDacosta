@@ -1,6 +1,7 @@
 import type {
   AvailabilityQuery,
   AvailabilityResult,
+  DateClosure,
   EventSpace,
   Reservation,
   TimeSlotSuggestion,
@@ -43,6 +44,7 @@ export function evaluateAvailability(
   catalog: readonly EventSpace[],
   reservations: readonly Reservation[],
   now: Date = new Date(),
+  closures: readonly DateClosure[] = [],
 ): Omit<AvailabilityResult, 'alternatives'> {
   const space = catalog.find((item) => item.id === query.spaceId)
   if (!space) {
@@ -55,6 +57,11 @@ export function evaluateAvailability(
 
   if (!isFutureDate(query.date, now)) {
     return unavailable('past_date', 'La fecha debe ser posterior a hoy.')
+  }
+
+  const closure = closures.find((item) => item.date === query.date && (item.spaceId === null || item.spaceId === space.id))
+  if (closure) {
+    return unavailable('closed', closure.reason.trim() || 'Ese día no tiene disponibilidad.')
   }
 
   const start = parseClock(query.startTime)
@@ -108,6 +115,7 @@ function suggestAlternatives(
   catalog: readonly EventSpace[],
   reservations: readonly Reservation[],
   now: Date,
+  closures: readonly DateClosure[],
 ): TimeSlotSuggestion[] {
   const start = parseClock(query.startTime)
   const end = parseClock(query.endTime)
@@ -127,7 +135,7 @@ function suggestAlternatives(
   for (const space of catalog) {
     if (space.id === query.spaceId) continue
     if (query.guests !== undefined && query.guests > space.capacityMax) continue
-    const result = evaluateAvailability({ ...query, spaceId: space.id }, catalog, reservations, now)
+    const result = evaluateAvailability({ ...query, spaceId: space.id }, catalog, reservations, now, closures)
     if (!result.available) continue
     push({
       spaceId: space.id,
@@ -162,6 +170,7 @@ function suggestAlternatives(
         catalog,
         reservations,
         now,
+        closures,
       )
       if (result.available) {
         push({
@@ -176,7 +185,7 @@ function suggestAlternatives(
     }
 
     const nextDate = addDays(query.date, 1)
-    const tomorrow = evaluateAvailability({ ...query, date: nextDate }, catalog, reservations, now)
+    const tomorrow = evaluateAvailability({ ...query, date: nextDate }, catalog, reservations, now, closures)
     if (tomorrow.available) {
       push({
         spaceId: current.id,
@@ -197,14 +206,15 @@ export function checkAvailability(
   catalog: readonly EventSpace[],
   reservations: readonly Reservation[],
   now: Date = new Date(),
+  closures: readonly DateClosure[] = [],
 ): AvailabilityResult {
-  const evaluation = evaluateAvailability(query, catalog, reservations, now)
+  const evaluation = evaluateAvailability(query, catalog, reservations, now, closures)
   if (evaluation.available || evaluation.code === 'past_date' || evaluation.code === 'invalid_date' || evaluation.code === 'invalid_time_range' || evaluation.code === 'space_not_found') {
     return { ...evaluation, alternatives: [] }
   }
   return {
     ...evaluation,
-    alternatives: suggestAlternatives(query, catalog, reservations, now),
+    alternatives: suggestAlternatives(query, catalog, reservations, now, closures),
   }
 }
 
@@ -216,6 +226,7 @@ export function countFreeSpaces(
   reservations: readonly Reservation[],
   guests: number | undefined,
   now: Date,
+  closures: readonly DateClosure[] = [],
 ): number {
   return catalog.filter((space) => {
     return evaluateAvailability(
@@ -223,6 +234,7 @@ export function countFreeSpaces(
       catalog,
       reservations,
       now,
+      closures,
     ).available
   }).length
 }

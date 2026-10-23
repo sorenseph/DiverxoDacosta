@@ -16,6 +16,7 @@ export interface ReservationsService {
   listActive(): Reservation[]
   getByFolio(folio: string): Reservation | undefined
   confirm(draft: BookingDraft, now?: Date): ConfirmOutcome
+  remember(reservation: Reservation, now?: Date): ConfirmOutcome
   cancel(id: string): Reservation | null
   reset(): void
 }
@@ -34,7 +35,7 @@ export function createReservationsService(store: DemoStore, clock: () => Date = 
   }
 
   function confirm(draft: BookingDraft, now = clock()): ConfirmOutcome {
-    const validation = validateStep(6, draft, store.read().reservations, now)
+    const validation = validateStep(6, draft, store.read().reservations, now, store.read().closures)
     const reservationDraft = toReservationDraft(draft)
     const probed = draft.spaceId
       ? checkAvailability(
@@ -48,6 +49,7 @@ export function createReservationsService(store: DemoStore, clock: () => Date = 
           spaces,
           store.read().reservations,
           now,
+          store.read().closures,
         )
       : null
 
@@ -79,6 +81,7 @@ export function createReservationsService(store: DemoStore, clock: () => Date = 
       spaces,
       fresh.reservations,
       now,
+      fresh.closures,
     )
     if (!availability.available) {
       return { ok: false, message: 'Ese horario acaba de ocuparse. Elige otra opción.', availability }
@@ -120,6 +123,7 @@ export function createReservationsService(store: DemoStore, clock: () => Date = 
       spaces,
       again.reservations,
       now,
+      again.closures,
     )
     if (!secondCheck.available) {
       return {
@@ -142,6 +146,36 @@ export function createReservationsService(store: DemoStore, clock: () => Date = 
     return { ok: true, reservation }
   }
 
+  function remember(reservation: Reservation, now = clock()): ConfirmOutcome {
+    const database = store.read()
+    if (database.reservations.some((item) => item.id === reservation.id)) {
+      return { ok: true, reservation }
+    }
+    const availability = checkAvailability(
+      {
+        spaceId: reservation.spaceId,
+        date: reservation.date,
+        startTime: reservation.startTime,
+        endTime: reservation.endTime,
+        guests: reservation.guests,
+      },
+      spaces,
+      database.reservations,
+      now,
+      database.closures,
+    )
+    if (!availability.available) {
+      return { ok: false, message: availability.message, availability }
+    }
+    try {
+      store.write({ ...database, reservations: [...database.reservations, reservation] })
+    } catch (error) {
+      const message = error instanceof DemoStoreError ? error.message : 'No se pudo guardar la reservación. Inténtalo de nuevo.'
+      return { ok: false, message, availability: null }
+    }
+    return { ok: true, reservation }
+  }
+
   function cancel(id: string): Reservation | null {
     const database = store.read()
     const index = database.reservations.findIndex((item) => item.id === id)
@@ -159,5 +193,5 @@ export function createReservationsService(store: DemoStore, clock: () => Date = 
     store.reset()
   }
 
-  return { list, listActive, getByFolio, confirm, cancel, reset }
+  return { list, listActive, getByFolio, confirm, remember, cancel, reset }
 }

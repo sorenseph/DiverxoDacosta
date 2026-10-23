@@ -1,5 +1,5 @@
 import { seedQuotes, seedReservations } from '@/data/seed'
-import type { DemoDatabase, EventKind, QuoteRequest, Reservation, ReservationStatus, SelectedAddons } from '@/types/domain'
+import type { DateClosure, DemoDatabase, EventKind, QuoteRequest, Reservation, ReservationStatus, SelectedAddons } from '@/types/domain'
 
 const STORAGE_KEY = 'diverxo-dacosta.v3'
 const STORAGE_VERSION = 1
@@ -46,6 +46,7 @@ export function cloneSeedDatabase(): DemoDatabase {
   return {
     reservations: structuredClone(seedReservations),
     quotes: structuredClone(seedQuotes),
+    closures: [],
   }
 }
 
@@ -134,12 +135,30 @@ function readQuote(value: unknown): QuoteRequest | null {
   }
 }
 
+function readClosure(value: unknown): DateClosure | null {
+  if (!isRecord(value)) return null
+  if (typeof value.id !== 'string' || typeof value.date !== 'string' || typeof value.reason !== 'string') return null
+  if (typeof value.createdAt !== 'string') return null
+  if (value.spaceId !== null && typeof value.spaceId !== 'string') return null
+  return {
+    id: value.id,
+    spaceId: value.spaceId,
+    date: value.date,
+    reason: value.reason,
+    createdAt: value.createdAt,
+  }
+}
+
 function parseDatabase(value: unknown): DemoDatabase | null {
   if (!isRecord(value) || value.version !== STORAGE_VERSION) return null
   if (!Array.isArray(value.reservations) || !Array.isArray(value.quotes)) return null
+  const closures = Array.isArray(value.closures)
+    ? value.closures.map(readClosure).filter((item): item is DateClosure => item !== null)
+    : []
   return {
     reservations: value.reservations.map(readReservation).filter((item): item is Reservation => item !== null),
     quotes: value.quotes.map(readQuote).filter((item): item is QuoteRequest => item !== null),
+    closures,
   }
 }
 

@@ -1,7 +1,7 @@
 import { eventKindOptions } from '@/data/content'
 import { spaces } from '@/data/spaces'
 import { checkAvailability } from '@/services/availabilityService'
-import type { BookingDraft, EventKind, Reservation, ReservationDraft } from '@/types/domain'
+import type { BookingDraft, DateClosure, EventKind, Reservation, ReservationDraft } from '@/types/domain'
 import { isValidEmail, isValidPhone } from '@/utils/money'
 import { isFutureDate, isIsoDate, parseClock } from '@/utils/time'
 
@@ -78,6 +78,7 @@ export function validateStep(
   draft: BookingDraft,
   reservations: readonly Reservation[],
   now: Date,
+  closures: readonly DateClosure[] = [],
 ): ValidationResult {
   const errors: FieldErrors = {}
 
@@ -103,6 +104,7 @@ export function validateStep(
         spaces,
         reservations,
         now,
+        closures,
       )
       if (!availability.available && availability.code !== 'over_capacity') {
         errors.spaceId = availability.message

@@ -25,6 +25,7 @@ const summary = computed(() => {
     demo.reservations,
     undefined,
     new Date(),
+    demo.closures,
   )
   if (free === 0) return 'Ningún espacio está libre en ese horario. Puedes cambiar la hora o revisar otras opciones al elegir el lugar.'
   return free === 1

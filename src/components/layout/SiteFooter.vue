@@ -40,7 +40,7 @@ const year = new Date().getFullYear()
     </div>
     <div class="container footer-base">
       <p>© {{ year }} DiverxoDacosta.</p>
-      <p>Catering, banquetes y espacios para eventos.</p>
+      <p>Catering, banquetes y espacios para eventos. <RouterLink to="/admin">Administración</RouterLink> · <RouterLink to="/equipo">Equipo</RouterLink></p>
     </div>
   </footer>
 </template>

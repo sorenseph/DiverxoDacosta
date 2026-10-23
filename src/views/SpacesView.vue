@@ -22,7 +22,7 @@ const query = ref<SpaceQuery>({
   availability: 'todas',
 })
 
-const result = computed(() => filterSpaces(query.value, demo.reservations, new Date()))
+const result = computed(() => filterSpaces(query.value, demo.reservations, new Date(), demo.closures))
 </script>
 
 <template>

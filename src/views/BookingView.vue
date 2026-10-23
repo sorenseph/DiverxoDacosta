@@ -45,7 +45,7 @@ watch(step, async () => {
 })
 
 function next() {
-  const validation = validateStep(step.value, booking.draft, demo.reservations, new Date())
+  const validation = validateStep(step.value, booking.draft, demo.reservations, new Date(), demo.closures)
   booking.errors = validation.errors
   if (!validation.valid) return
   booking.clearFeedback()
@@ -53,13 +53,35 @@ function next() {
 }
 
 function back() {
+  booking.ticket = ''
+  booking.code = ''
   booking.clearFeedback()
   step.value -= 1
 }
 
+async function sendCode() {
+  const validation = validateStep(6, booking.draft, demo.reservations, new Date(), demo.closures)
+  booking.errors = validation.errors
+  if (!validation.valid) {
+    booking.confirmError = validation.messages[0] ?? 'Revisa los datos antes de pedir el código.'
+    return
+  }
+  booking.submitting = true
+  booking.confirmError = ''
+  const result = await demo.sendBookingCode(booking.draft, booking.channel)
+  booking.submitting = false
+  if (!result.ok) {
+    booking.confirmError = result.message
+    return
+  }
+  booking.ticket = result.ticket
+  booking.codeHint = result.hint
+  booking.code = ''
+}
+
 async function confirmReservation() {
   booking.submitting = true
-  const result = await demo.confirm(booking.draft, booking.accountPassword)
+  const result = await demo.confirm(booking.ticket, booking.code)
   booking.submitting = false
   if (!result.ok) {
     booking.confirmError = result.message
@@ -87,7 +109,7 @@ function applyAlternative(option: TimeSlotSuggestion) {
     <div class="container">
       <p class="eyebrow">Tu evento</p>
       <h1 class="block-title">Planea tu evento.</h1>
-      <p class="lede" style="margin: 1rem 0 2rem">Cuéntanos la ocasión, elige el espacio y los servicios, y revisa el presupuesto antes de enviar la solicitud.</p>
+      <p class="lede" style="margin: 1rem 0 2rem">Cuéntanos la ocasión, elige el espacio y confirma con un código que te llega al correo o al teléfono.</p>
       <div class="booking-layout">
         <StepIndicator />
         <div ref="heading">
@@ -97,9 +119,22 @@ function applyAlternative(option: TimeSlotSuggestion) {
           <div class="actions" style="margin-top: 1.6rem">
             <button v-if="step > 1" class="btn btn-line btn-line-dark" type="button" @click="back">Anterior</button>
             <button v-if="step < 6" class="btn btn-dark" type="button" @click="next">Continuar</button>
-            <button v-else class="btn btn-gold" type="button" :disabled="submitting" :aria-busy="submitting" :class="{ 'is-loading': submitting }" @click="confirmReservation">
-              {{ submitting ? 'Enviando…' : 'Enviar solicitud' }}
-            </button>
+            <template v-else-if="!booking.ticket">
+              <button class="btn btn-gold" type="button" :disabled="submitting" :aria-busy="submitting" :class="{ 'is-loading': submitting }" @click="sendCode">
+                {{ submitting ? 'Enviando código…' : 'Enviar código' }}
+              </button>
+            </template>
+            <template v-else>
+              <div class="field">
+                <label for="codigo">Código de 6 dígitos</label>
+                <input id="codigo" v-model="booking.code" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+                <p class="fine">Lo enviamos a {{ booking.codeHint }}. Caduca en 10 minutos.</p>
+              </div>
+              <button class="btn btn-gold" type="button" :disabled="submitting || booking.code.trim().length < 6" :aria-busy="submitting" :class="{ 'is-loading': submitting }" @click="confirmReservation">
+                {{ submitting ? 'Confirmando…' : 'Confirmar reservación' }}
+              </button>
+              <button class="btn btn-line btn-line-dark" type="button" :disabled="submitting" @click="sendCode">Enviar otro código</button>
+            </template>
           </div>
         </div>
       </div>

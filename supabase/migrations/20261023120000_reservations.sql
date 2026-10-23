@@ -92,6 +92,57 @@ begin
 end;
 $$;
 
+create table if not exists public.diverxo_closures (
+  id text primary key,
+  space_id text,
+  event_date date not null,
+  reason text not null default '',
+  created_at timestamptz not null default now()
+);
+
+alter table public.diverxo_closures enable row level security;
+
+create or replace function public.diverxo_list_closures()
+returns table (
+  id text,
+  space_id text,
+  event_date date,
+  reason text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select id, space_id, event_date, reason
+  from public.diverxo_closures;
+$$;
+
+grant execute on function public.diverxo_list_closures() to anon, authenticated;
+
+create table if not exists public.diverxo_staff (
+  id text primary key,
+  username text not null unique,
+  full_name text not null,
+  password_hash text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.diverxo_shifts (
+  id text primary key,
+  staff_id text not null references public.diverxo_staff (id) on delete cascade,
+  event_date date not null,
+  space_id text not null,
+  activity text not null,
+  start_time text not null,
+  end_time text not null,
+  notes text not null default '',
+  created_at timestamptz not null default now()
+);
+
+alter table public.diverxo_staff enable row level security;
+alter table public.diverxo_shifts enable row level security;
+
 drop trigger if exists diverxo_on_auth_user_created on auth.users;
 create trigger diverxo_on_auth_user_created
   after insert on auth.users

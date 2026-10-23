@@ -23,6 +23,7 @@ const options = computed(() => listSpaces().map((space) => ({
     listSpaces(),
     demo.reservations,
     new Date(),
+    demo.closures,
   ),
 })))
 </script>

@@ -1,4 +1,4 @@
-export type MailKind = 'registro' | 'reservacion' | 'cotizacion' | 'cancelacion'
+export type MailKind = 'registro' | 'reservacion' | 'cotizacion' | 'cancelacion' | 'codigo'
 
 export interface MailLine {
   label: string
@@ -17,9 +17,10 @@ export interface MailRequest {
   message?: string
   lines?: MailLine[]
   totalMxn?: number
+  code?: string
 }
 
-const kinds = new Set<MailKind>(['registro', 'reservacion', 'cotizacion', 'cancelacion'])
+const kinds = new Set<MailKind>(['registro', 'reservacion', 'cotizacion', 'cancelacion', 'codigo'])
 
 function text(value: unknown, max: number): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -52,6 +53,7 @@ export function parseMailRequest(value: unknown): MailRequest | null {
     message: text(body.message, 800),
     lines,
     totalMxn: typeof body.totalMxn === 'number' && Number.isFinite(body.totalMxn) ? body.totalMxn : undefined,
+    code: text(body.code, 8),
   }
 }
 
@@ -69,6 +71,16 @@ function escapeHtml(value: string): string {
 
 export function renderMail(request: MailRequest): { subject: string; html: string; text: string } {
   const name = escapeHtml(request.name)
+  if (request.kind === 'codigo') {
+    const code = escapeHtml(request.code ?? '')
+    const subject = 'Tu código de DiverxoDacosta'
+    const text = `Hola ${request.name}. Tu código es ${request.code ?? ''}. Caduca en 10 minutos.`
+    return {
+      subject,
+      text,
+      html: `<p>Hola ${name}.</p><p>Tu código de confirmación es <strong style="letter-spacing:0.2em;font-size:1.4rem">${code}</strong>.</p><p>Caduca en 10 minutos. Si no solicitaste este código, puedes ignorar el mensaje.</p>`,
+    }
+  }
   if (request.kind === 'registro') {
     const subject = 'Tu cuenta en DiverxoDacosta'
     const text = `Hola ${request.name}. Ya puedes entrar a tu cuenta y seguir tus reservaciones.`

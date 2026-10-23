@@ -152,12 +152,41 @@ describe('checkAvailability', () => {
     )
     expect(result.available).toBe(true)
   })
+
+  it('cierra el día completo cuando la casa marca la fecha', () => {
+    const result = checkAvailability(
+      { spaceId: 'aurea', date: '2026-11-20', startTime: '16:00', endTime: '20:00' },
+      spaces,
+      [],
+      NOW,
+      [{ id: 'cierre', spaceId: null, date: '2026-11-20', reason: 'La casa está cerrada ese día.', createdAt: NOW.toISOString() }],
+    )
+    expect(result.available).toBe(false)
+    expect(result.code).toBe('closed')
+    const gardenOnly = [{ id: 'cierre', spaceId: 'magnolia', date: '2026-11-20', reason: 'Jardín cerrado.', createdAt: NOW.toISOString() }]
+    const salon = checkAvailability(
+      { spaceId: 'aurea', date: '2026-11-20', startTime: '16:00', endTime: '20:00' },
+      spaces,
+      [],
+      NOW,
+      gardenOnly,
+    )
+    const garden = checkAvailability(
+      { spaceId: 'magnolia', date: '2026-11-20', startTime: '16:00', endTime: '20:00' },
+      spaces,
+      [],
+      NOW,
+      gardenOnly,
+    )
+    expect(salon.available).toBe(true)
+    expect(garden.code).toBe('closed')
+  })
 })
 
 describe('reservaciones', () => {
   it('no confirma si faltan datos obligatorios y no guarda nada', () => {
     const store = createDemoStore(createMemoryStorage())
-    store.write({ reservations: [], quotes: [] })
+    store.write({ reservations: [], quotes: [], closures: [] })
     const service = createReservationsService(store, () => NOW)
     const outcome = service.confirm(readyDraft({ client: { fullName: '', email: '', phone: '', notes: '' } }))
     expect(outcome.ok).toBe(false)
@@ -166,7 +195,7 @@ describe('reservaciones', () => {
 
   it('bloquea el horario al confirmar y lo libera al cancelar', () => {
     const store = createDemoStore(createMemoryStorage())
-    store.write({ reservations: [], quotes: [] })
+    store.write({ reservations: [], quotes: [], closures: [] })
     const service = createReservationsService(store, () => NOW)
     const outcome = service.confirm(readyDraft())
     expect(outcome.ok).toBe(true)
@@ -191,7 +220,7 @@ describe('reservaciones', () => {
 
   it('impide una segunda reservación en el mismo horario', () => {
     const store = createDemoStore(createMemoryStorage())
-    store.write({ reservations: [], quotes: [] })
+    store.write({ reservations: [], quotes: [], closures: [] })
     const service = createReservationsService(store, () => NOW)
     expect(service.confirm(readyDraft()).ok).toBe(true)
     const second = service.confirm(readyDraft())
@@ -202,7 +231,7 @@ describe('reservaciones', () => {
   it('conserva los datos al abrir de nuevo el mismo almacenamiento', () => {
     const storage = createMemoryStorage()
     const firstStore = createDemoStore(storage)
-    firstStore.write({ reservations: [], quotes: [] })
+    firstStore.write({ reservations: [], quotes: [], closures: [] })
     const first = createReservationsService(firstStore, () => NOW)
     const outcome = first.confirm(readyDraft())
     expect(outcome.ok).toBe(true)
@@ -284,7 +313,7 @@ describe('quoteEvent', () => {
 
   it('conserva el importe guardado aunque la renta vigente sea otra', () => {
     const store = createDemoStore(createMemoryStorage())
-    store.write({ reservations: [], quotes: [] })
+    store.write({ reservations: [], quotes: [], closures: [] })
     const service = createReservationsService(store, () => NOW)
     const outcome = service.confirm(readyDraft({
       addons: { cateringPackageId: 'banquete-intermedio', waiters: false, furniture: false, decoration: false, extraIds: [] },

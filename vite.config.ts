@@ -3,6 +3,9 @@ import vue from '@vitejs/plugin-vue'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { loadEnv, type Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
+import adminHandler from './api/admin.ts'
+import staffHandler from './api/staff.ts'
+import verifyHandler from './api/verify.ts'
 import { deliverMail, parseMailRequest } from './server/mail.ts'
 import { storeQuote, storeReservation, type QuoteRecord, type ReservationRecord } from './server/records.ts'
 
@@ -21,7 +24,7 @@ function localApi(): Plugin {
     configureServer(server) {
       server.middlewares.use(async (request: IncomingMessage, response: ServerResponse, next: () => void) => {
         const url = request.url?.split('?')[0]
-        if (url !== '/api/email' && url !== '/api/reservation') {
+        if (url !== '/api/email' && url !== '/api/reservation' && url !== '/api/verify' && url !== '/api/admin' && url !== '/api/staff') {
           next()
           return
         }
@@ -34,6 +37,34 @@ function localApi(): Plugin {
           return
         }
         try {
+          if (url === '/api/verify' || url === '/api/admin' || url === '/api/staff') {
+            const raw = await readBody(request)
+            const body = raw ? JSON.parse(raw) as unknown : null
+            let statusCode = 200
+            let payload: unknown = { ok: false }
+            const sink = {
+              setHeader() {
+                return undefined
+              },
+              status(code: number) {
+                statusCode = code
+                return sink
+              },
+              json(data: unknown) {
+                payload = data
+              },
+            }
+            const handler = url === '/api/admin' ? adminHandler : url === '/api/staff' ? staffHandler : verifyHandler
+            await handler({
+              method: request.method,
+              body,
+              headers: request.headers,
+              on: () => undefined,
+            }, sink)
+            response.statusCode = statusCode
+            response.end(JSON.stringify(payload))
+            return
+          }
           const body = JSON.parse(await readBody(request) || 'null') as {
             action?: string
             reservation?: ReservationRecord

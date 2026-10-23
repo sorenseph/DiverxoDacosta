@@ -280,6 +280,46 @@ ul { margin: 0; padding: 0; list-style: none; }
 .stat-grid span { display: block; color: var(--muted); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; }
 
 .choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+fieldset.field { border: 0; margin: 0; padding: 0; }
+.channel-picks { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.45rem; }
+.channel-picks label { display: inline-flex; align-items: center; gap: 0.4rem; }
+.code-input { letter-spacing: 0.32em; font-size: 1.35rem; max-width: 12rem; }
+.admin-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.8rem; margin: 0.4rem 0 1.6rem; }
+.admin-stat { background: var(--white); border: 1px solid var(--line); padding: 0.9rem 1rem; }
+.admin-stat strong { display: block; font-family: "Cormorant Garamond", serif; font-size: 2.2rem; font-weight: 500; }
+main.is-admin { height: 100vh; min-height: 100vh; overflow: hidden; }
+main.is-admin .page-shell { height: 100%; min-height: 100%; }
+.admin-app { height: 100%; display: grid; grid-template-columns: 250px minmax(0, 1fr); background: #efece6; }
+.admin-side { background: var(--ink); color: var(--ivory); display: flex; flex-direction: column; gap: 1.2rem; padding: 1.3rem 0.9rem; min-height: 0; overflow: auto; }
+.admin-brand { display: grid; gap: 0.15rem; padding: 0.2rem 0.7rem 0.6rem; }
+.admin-brand strong { font-family: var(--serif); font-size: 1.7rem; font-weight: 500; letter-spacing: -0.03em; }
+.admin-brand span { color: var(--gold); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; }
+.admin-nav { display: grid; gap: 0.2rem; }
+.admin-nav button { display: flex; align-items: center; gap: 0.65rem; width: 100%; text-align: left; background: transparent; border: 0; color: rgba(248, 246, 241, 0.72); padding: 0.72rem 0.75rem; cursor: pointer; }
+.admin-nav button[aria-current="page"] { background: rgba(181, 154, 106, 0.2); color: var(--ivory); }
+.admin-side-foot { margin-top: auto; display: grid; gap: 0.45rem; padding: 0.4rem 0.7rem 0; }
+.admin-side-foot button, .admin-side-foot a { display: inline-flex; align-items: center; gap: 0.45rem; background: none; border: 0; color: rgba(248, 246, 241, 0.78); text-align: left; padding: 0.35rem 0; cursor: pointer; text-decoration: none; }
+.admin-menu-toggle { display: none; }
+.admin-main { min-width: 0; overflow: auto; padding: 1.5rem 1.7rem 2.4rem; }
+.admin-top { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 1.2rem; }
+.admin-top h1 { font-size: clamp(2rem, 3vw, 2.8rem); }
+.admin-user { color: var(--muted); font-size: 0.92rem; }
+.admin-gate { min-height: 100vh; display: grid; place-items: center; padding: 2rem 1.2rem; background: #efece6; }
+.admin-gate .narrow { background: var(--white); border: 1px solid var(--line); padding: 2rem 1.4rem; }
+.admin-main .admin-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+@media (max-width: 760px) {
+  .admin-app { grid-template-columns: 1fr; height: auto; min-height: 0; align-content: start; }
+  main.is-admin, main.is-admin .page-shell { height: auto; overflow: visible; }
+  .admin-side { position: sticky; top: 0; z-index: 30; height: auto; }
+  .admin-nav, .admin-side-foot { display: none; }
+  .admin-app.is-menu-open .admin-nav, .admin-app.is-menu-open .admin-side-foot { display: grid; }
+  .admin-side-foot { margin-top: 0.4rem; padding-bottom: 0.6rem; }
+  .admin-menu-toggle { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; background: transparent; border: 1px solid rgba(248, 246, 241, 0.25); color: var(--ivory); width: 42px; height: 42px; cursor: pointer; }
+  .admin-brand { display: flex; align-items: center; padding-bottom: 0; }
+  .admin-main { overflow: visible; padding: 1.2rem 1rem 2.4rem; }
+  .admin-main .admin-stats { grid-template-columns: 1fr 1fr; }
+}
 .choice, .check-row {
   text-align: left;
   background: var(--white);
@@ -333,7 +373,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   .service-list a { grid-template-columns: 1fr; gap: 0.4rem; }
   .gallery-grid { grid-template-columns: 1fr; }
   .gallery-grid figure:first-child, .gallery-grid figure:last-child { grid-column: auto; }
-  .choice-grid { grid-template-columns: 1fr; }
+  .choice-grid, .admin-stats { grid-template-columns: 1fr; }
   .brand img { height: 52px; }
   .footer-logo { height: 64px; }
   .steps { position: static; grid-auto-flow: column; overflow-x: auto; }

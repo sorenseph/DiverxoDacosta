@@ -1,83 +1,93 @@
 <script setup lang="ts">
 import { usePageMeta } from '@/composables/usePageMeta'
-import { currentUser, ensureAccount, signIn, signOut } from '@/services/account'
-import { sendMail } from '@/services/mailClient'
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-usePageMeta('Cuenta', 'Entra o crea tu cuenta para guardar reservaciones y recibir la cotización por correo.')
+usePageMeta('Cuenta', 'Entra con tu usuario y contraseña.')
 
-const email = ref('')
+const ADMIN_KEY = 'diverxo-admin.session'
+const STAFF_KEY = 'diverxo-staff.session'
+const router = useRouter()
+const username = ref('')
 const password = ref('')
-const name = ref('')
-const mode = ref<'entrar' | 'crear'>('crear')
-const sessionEmail = ref('')
-const message = ref('')
 const error = ref('')
+const busy = ref(false)
+const role = ref<'admin' | 'staff' | ''>('')
 
-async function refresh() {
-  const user = await currentUser()
-  sessionEmail.value = user?.email ?? ''
+function readRole() {
+  if (sessionStorage.getItem(ADMIN_KEY)) role.value = 'admin'
+  else if (sessionStorage.getItem(STAFF_KEY)) role.value = 'staff'
+  else role.value = ''
 }
 
-async function submit() {
+async function login() {
   error.value = ''
-  message.value = ''
-  if (mode.value === 'entrar') {
-    error.value = await signIn(email.value, password.value) ?? ''
-    if (!error.value) message.value = 'Sesión iniciada.'
-  } else {
-    const account = await ensureAccount(email.value, password.value, name.value || email.value)
-    if (!account.ok) {
-      error.value = account.message
-      return
-    }
-    const mailed = await sendMail({ kind: 'registro', to: email.value.trim(), name: name.value.trim() || email.value.trim() })
-    message.value = mailed
-      ? 'La cuenta quedó registrada. El correo de bienvenida no pudo enviarse todavía.'
-      : 'La cuenta quedó registrada. Revisa tu correo.'
+  busy.value = true
+  const staff = await fetch('/api/staff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'login', username: username.value, password: password.value }),
+  })
+  const staffBody = await staff.json() as { token?: string }
+  if (staff.ok && staffBody.token) {
+    sessionStorage.setItem(STAFF_KEY, staffBody.token)
+    password.value = ''
+    await router.push('/equipo')
+    return
   }
-  await refresh()
+  const admin = await fetch('/api/admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'login', username: username.value, password: password.value }),
+  })
+  const adminBody = await admin.json() as { token?: string }
+  busy.value = false
+  password.value = ''
+  if (admin.ok && adminBody.token) {
+    sessionStorage.setItem(ADMIN_KEY, adminBody.token)
+    await router.push('/admin')
+    return
+  }
+  error.value = 'Usuario o contraseña incorrectos.'
 }
 
-async function exit() {
-  await signOut()
-  sessionEmail.value = ''
-  message.value = 'Cerraste la sesión.'
+function exit() {
+  sessionStorage.removeItem(ADMIN_KEY)
+  sessionStorage.removeItem(STAFF_KEY)
+  role.value = ''
 }
 
-onMounted(refresh)
+onMounted(readRole)
 </script>
 
 <template>
   <section class="section">
     <div class="container narrow">
       <p class="eyebrow">Cuenta</p>
-      <h1 class="block-title">Tu cuenta.</h1>
-      <p v-if="sessionEmail" class="lede" style="margin: 1rem 0">Sesión de {{ sessionEmail }}.</p>
-      <p v-else class="lede" style="margin: 1rem 0">Crea una cuenta para guardar reservaciones y recibir la cotización por correo.</p>
-      <form class="choice-grid" @submit.prevent="submit">
-        <div v-if="mode === 'crear'" class="field">
-          <label for="cuenta-nombre">Nombre</label>
-          <input id="cuenta-nombre" v-model="name" type="text" autocomplete="name" />
-        </div>
+      <h1 class="block-title">Entrar.</h1>
+      <form v-if="!role" class="choice-grid" style="margin-top: 1.2rem" @submit.prevent="login">
+        <p class="lede" style="grid-column: 1 / -1">Usa el usuario y la contraseña de la casa. El código por correo solo se usa al confirmar una reservación.</p>
         <div class="field">
-          <label for="cuenta-correo">Correo</label>
-          <input id="cuenta-correo" v-model="email" type="email" autocomplete="email" required />
+          <label for="cuenta-usuario">Usuario</label>
+          <input id="cuenta-usuario" v-model="username" type="text" autocomplete="username" required />
         </div>
         <div class="field">
           <label for="cuenta-clave">Contraseña</label>
-          <input id="cuenta-clave" v-model="password" type="password" autocomplete="current-password" minlength="6" required />
+          <input id="cuenta-clave" v-model="password" type="password" autocomplete="current-password" required />
         </div>
         <div class="actions" style="grid-column: 1 / -1">
-          <button class="btn btn-dark" type="submit">{{ mode === 'crear' ? 'Crear cuenta' : 'Entrar' }}</button>
-          <button class="btn btn-line btn-line-dark" type="button" @click="mode = mode === 'crear' ? 'entrar' : 'crear'">
-            {{ mode === 'crear' ? 'Ya tengo cuenta' : 'Crear una cuenta' }}
-          </button>
-          <button v-if="sessionEmail" class="btn btn-line btn-line-dark" type="button" @click="exit">Cerrar sesión</button>
+          <button class="btn btn-dark" type="submit" :disabled="busy">Entrar</button>
         </div>
       </form>
+      <div v-else style="margin-top: 1.2rem">
+        <p class="lede">Ya tienes la sesión abierta.</p>
+        <div class="actions" style="margin-top: 1rem">
+          <RouterLink v-if="role === 'admin'" class="btn btn-dark" to="/admin">Ir a administración</RouterLink>
+          <RouterLink v-else class="btn btn-dark" to="/equipo">Ver mis actividades</RouterLink>
+          <button class="btn btn-line btn-line-dark" type="button" @click="exit">Cerrar sesión</button>
+        </div>
+      </div>
       <p v-if="error" class="field-error" role="alert" style="margin-top: 1rem">{{ error }}</p>
-      <p v-if="message" class="demo-callout" role="status" style="margin-top: 1rem">{{ message }}</p>
     </div>
   </section>
 </template>

@@ -1,4 +1,4 @@
-import type { QuoteRequest, Reservation, ReservationStatus } from '@/types/domain'
+import type { DateClosure, QuoteRequest, Reservation, ReservationStatus } from '@/types/domain'
 
 interface BusySlot {
   id: string
@@ -69,6 +69,20 @@ export async function pushQuote(quote: QuoteRequest, userId: string | null): Pro
   if (response.ok) return null
   const body = await response.json() as { error?: string }
   return body.error ?? 'No se pudo guardar la cotización.'
+}
+
+export async function loadClosures(): Promise<DateClosure[]> {
+  const { supabase } = await import('@/services/supabase')
+  if (!supabase) return []
+  const { data, error } = await supabase.rpc('diverxo_list_closures')
+  if (error || !Array.isArray(data)) return []
+  return (data as { id: string; space_id: string | null; event_date: string; reason: string }[]).map((item) => ({
+    id: item.id,
+    spaceId: item.space_id,
+    date: String(item.event_date).slice(0, 10),
+    reason: item.reason ?? '',
+    createdAt: '',
+  }))
 }
 
 export async function loadBusySlots(): Promise<Reservation[]> {

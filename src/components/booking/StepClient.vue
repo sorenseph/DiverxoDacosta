@@ -7,7 +7,7 @@ const booking = useBookingStore()
 <template>
   <div>
     <h2 tabindex="-1">Datos de contacto</h2>
-    <p class="lede" style="margin: 0.8rem 0 1.2rem">Déjanos tus datos para enviarte la propuesta y confirmar la fecha.</p>
+    <p class="lede" style="margin: 0.8rem 0 1.2rem">Déjanos tus datos. Al final te enviamos un código de 6 dígitos para confirmar, sin crear una contraseña.</p>
     <div class="choice-grid">
       <div class="field">
         <label for="nombre">Nombre completo</label>
@@ -24,11 +24,13 @@ const booking = useBookingStore()
         <input id="telefono" v-model="booking.draft.client.phone" type="tel" autocomplete="tel" inputmode="tel" :aria-invalid="Boolean(booking.errors.phone)" :aria-describedby="booking.errors.phone ? 'telefono-error' : undefined" />
         <p v-if="booking.errors.phone" id="telefono-error" class="field-error" role="alert">{{ booking.errors.phone }}</p>
       </div>
-      <div class="field">
-        <label for="clave">Contraseña de tu cuenta</label>
-        <input id="clave" v-model="booking.accountPassword" type="password" autocomplete="new-password" minlength="6" />
-        <p class="fine">La usamos para guardar la reservación en tu cuenta. Mínimo 6 caracteres.</p>
-      </div>
+      <fieldset class="field" style="grid-column: 1 / -1">
+        <legend>¿Dónde recibes el código?</legend>
+        <div class="channel-picks">
+          <label><input v-model="booking.channel" type="radio" value="email" /> Correo electrónico</label>
+          <label><input v-model="booking.channel" type="radio" value="phone" /> Teléfono</label>
+        </div>
+      </fieldset>
       <div class="field" style="grid-column: 1 / -1">
         <label for="notas">Comentarios o necesidades especiales</label>
         <textarea id="notas" v-model="booking.draft.client.notes" />

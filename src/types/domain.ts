@@ -24,6 +24,17 @@ export type AvailabilityCode =
   | 'invalid_time_range'
   | 'overlap'
   | 'over_capacity'
+  | 'closed'
+
+/** Día cerrado por la casa, aunque no haya una reservación en la agenda. */
+export interface DateClosure {
+  id: string
+  /** null cierra todos los espacios ese día. */
+  spaceId: string | null
+  date: string
+  reason: string
+  createdAt: string
+}
 
 export interface SpaceImage {
   src: string
@@ -179,6 +190,7 @@ export interface AvailabilityQuery {
 export interface DemoDatabase {
   reservations: Reservation[]
   quotes: QuoteRequest[]
+  closures: DateClosure[]
 }
 
 export interface BookingDraft {

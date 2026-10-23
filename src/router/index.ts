@@ -16,6 +16,8 @@ const router = createRouter({
     { path: '/nosotros', name: 'about', component: () => import('@/views/AboutView.vue') },
     { path: '/contacto', name: 'contact', component: () => import('@/views/ContactView.vue') },
     { path: '/cuenta', name: 'account', component: () => import('@/views/AccountView.vue') },
+    { path: '/admin', name: 'admin', component: () => import('@/views/AdminView.vue') },
+    { path: '/equipo', name: 'staff', component: () => import('@/views/StaffView.vue') },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/NotFoundView.vue') },
   ],
 })

@@ -1,6 +1,6 @@
 import { spaces } from '@/data/spaces'
 import { checkAvailability } from '@/services/availabilityService'
-import type { AvailabilityResult, EventSpace, Reservation, SpaceKind } from '@/types/domain'
+import type { AvailabilityResult, DateClosure, EventSpace, Reservation, SpaceKind } from '@/types/domain'
 
 export interface SpaceQuery {
   kind: SpaceKind | 'todos'
@@ -41,6 +41,7 @@ export function filterSpaces(
   query: SpaceQuery,
   reservations: readonly Reservation[],
   now: Date,
+  closures: readonly DateClosure[] = [],
 ): { items: SpaceListing[]; note: string | null } {
   const hasDate = query.date.trim().length > 0
   const startTime = query.startTime || '16:00'
@@ -66,6 +67,7 @@ export function filterSpaces(
             spaces,
             reservations,
             now,
+            closures,
           )
         : null
       return { space, availability }

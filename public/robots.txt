@@ -2,5 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /reservaciones
 Disallow: /reservacion/
+Disallow: /admin
+Disallow: /equipo
 
 # Las reservaciones son privadas.
