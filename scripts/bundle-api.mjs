@@ -1,5 +1,5 @@
 import { build } from 'vite'
-import { cpSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
+import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const names = readdirSync('api').filter((file) => file.endsWith('.ts')).map((file) => file.replace(/\.ts$/, ''))
@@ -11,6 +11,7 @@ for (const name of names) {
     configFile: false,
     publicDir: false,
     logLevel: 'warn',
+    ssr: { noExternal: true },
     build: {
       ssr: join('api', `${name}.ts`),
       outDir: join(outDir, name),
@@ -28,9 +29,8 @@ for (const name of names) {
 }
 
 if (process.env.VERCEL === '1') {
-  mkdirSync('api', { recursive: true })
   for (const name of names) {
-    cpSync(join(outDir, name, `${name}.js`), join('api', `${name}.js`))
-    rmSync(join('api', `${name}.ts`))
+    const bundled = readFileSync(join(outDir, name, `${name}.js`), 'utf8')
+    writeFileSync(join('api', `${name}.ts`), bundled)
   }
 }
