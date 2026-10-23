@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
-import { hashPassword, verifyPassword } from './passwords.ts'
+import { hashPassword, verifyPassword } from './passwords'
 
 export interface StaffAccount {
   id: string

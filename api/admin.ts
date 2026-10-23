@@ -1,7 +1,8 @@
-import { issueAdminToken, readAdminToken } from '../server/otp.ts'
-import { adminCredentialsMatch } from '../server/passwords.ts'
-import { createShift, createStaff, listTeam, removeShift, setStaffActive, type StaffShift } from '../server/staff.ts'
-import { spaceNames } from '../server/booking.ts'
+/// <reference types="node" />
+import { issueAdminToken, readAdminToken } from '../server/otp'
+import { adminCredentialsMatch } from '../server/passwords'
+import { createShift, createStaff, listTeam, removeShift, setStaffActive, type StaffShift } from '../server/staff'
+import { spaceNames } from '../server/booking'
 import {
   listClosures,
   listQuotes,
@@ -10,8 +11,8 @@ import {
   setReservationStatus,
   storeClosure,
   type ReservationRecord,
-} from '../server/records.ts'
-import type { Reservation, ReservationStatus } from '../src/types/domain.ts'
+} from '../server/records'
+import type { Reservation, ReservationStatus } from '../src/types/domain'
 
 interface NodeResponse {
   status: (code: number) => NodeResponse

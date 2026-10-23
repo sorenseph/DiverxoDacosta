@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomInt, timingSafeEqual } from 'node:crypto'
-import { deliverMail } from './mail.ts'
-import { deliverSms } from './sms.ts'
+import { deliverMail } from './mail'
+import { deliverSms } from './sms'
 
 export type OtpChannel = 'email' | 'phone'
 

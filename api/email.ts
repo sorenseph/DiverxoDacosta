@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { deliverMail, parseMailRequest } from '../server/mail'
 
 interface NodeResponse {
