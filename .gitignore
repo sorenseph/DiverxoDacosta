@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 .data/
+.api-bundle/
 
 # Editor directories and files
 .vscode/*

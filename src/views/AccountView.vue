@@ -20,6 +20,15 @@ function readRole() {
   else role.value = ''
 }
 
+async function readToken(response: Response): Promise<string> {
+  try {
+    const body = await response.json() as { token?: string }
+    return body.token ?? ''
+  } catch {
+    return ''
+  }
+}
+
 async function login() {
   error.value = ''
   busy.value = true
@@ -28,9 +37,9 @@ async function login() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'login', username: username.value, password: password.value }),
   })
-  const staffBody = await staff.json() as { token?: string }
-  if (staff.ok && staffBody.token) {
-    sessionStorage.setItem(STAFF_KEY, staffBody.token)
+  const staffToken = await readToken(staff)
+  if (staff.ok && staffToken) {
+    sessionStorage.setItem(STAFF_KEY, staffToken)
     password.value = ''
     await router.push('/equipo')
     return
@@ -40,15 +49,17 @@ async function login() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'login', username: username.value, password: password.value }),
   })
-  const adminBody = await admin.json() as { token?: string }
+  const adminToken = await readToken(admin)
   busy.value = false
   password.value = ''
-  if (admin.ok && adminBody.token) {
-    sessionStorage.setItem(ADMIN_KEY, adminBody.token)
+  if (admin.ok && adminToken) {
+    sessionStorage.setItem(ADMIN_KEY, adminToken)
     await router.push('/admin')
     return
   }
-  error.value = 'Usuario o contraseña incorrectos.'
+  error.value = staff.status >= 500 || admin.status >= 500
+    ? 'El acceso no está disponible en este momento.'
+    : 'Usuario o contraseña incorrectos.'
 }
 
 function exit() {
