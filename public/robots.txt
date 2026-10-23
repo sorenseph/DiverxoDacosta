@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /reservaciones
+Disallow: /reservacion/
+
+# Las reservaciones son privadas.
