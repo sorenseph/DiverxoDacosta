@@ -13,6 +13,7 @@ dist-ssr
 *.local
 .data/
 .api-bundle/
+.vercel/
 
 # Editor directories and files
 .vscode/*
