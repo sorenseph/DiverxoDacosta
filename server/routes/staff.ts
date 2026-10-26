@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import { issueStaffToken, readStaffToken } from '../server/otp'
-import { authenticateStaff, shiftsFor } from '../server/staff'
+import { issueStaffToken, readStaffToken } from '../otp'
+import { authenticateStaff, shiftsFor } from '../staff'
 
 interface NodeResponse {
   status: (code: number) => NodeResponse

@@ -1,8 +1,8 @@
 /// <reference types="node" />
-import { bookingConflict, spaceNames } from '../server/booking'
-import { deliverMail, type MailLine } from '../server/mail'
-import { matchCode, sendCode, type OtpChannel } from '../server/otp'
-import { listClosures, listReservations, storeReservation, type ReservationRecord } from '../server/records'
+import { bookingConflict, spaceNames } from '../booking'
+import { deliverMail, type MailLine } from '../mail'
+import { matchCode, sendCode, type OtpChannel } from '../otp'
+import { listClosures, listReservations, storeReservation, type ReservationRecord } from '../records'
 
 interface NodeResponse {
   status: (code: number) => NodeResponse

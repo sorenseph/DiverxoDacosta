@@ -1,1 +1,0 @@
-{"root":["./api/admin.ts","./api/email.ts","./api/reservation.ts","./api/staff.ts","./api/verify.ts","./server/booking.ts","./server/mail.ts","./server/otp.ts","./server/passwords.ts","./server/records.ts","./server/sms.ts","./server/staff.ts","./src/types/domain.ts"],"errors":true,"version":"6.0.3"}

@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { storeQuote, storeReservation, type QuoteRecord, type ReservationRecord } from '../server/records'
+import { storeQuote, storeReservation, type QuoteRecord, type ReservationRecord } from '../records'
 
 interface NodeResponse {
   status: (code: number) => NodeResponse

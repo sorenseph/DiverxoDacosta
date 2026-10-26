@@ -3,11 +3,6 @@ import vue from '@vitejs/plugin-vue'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { loadEnv, type Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
-import adminHandler from './api/admin.ts'
-import staffHandler from './api/staff.ts'
-import verifyHandler from './api/verify.ts'
-import { deliverMail, parseMailRequest } from './server/mail.ts'
-import { storeQuote, storeReservation, type QuoteRecord, type ReservationRecord } from './server/records.ts'
 
 function readBody(request: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -37,7 +32,16 @@ function localApi(): Plugin {
           return
         }
         try {
+          const [{ deliverMail, parseMailRequest }, { storeQuote, storeReservation }] = await Promise.all([
+            import('./server/mail.ts'),
+            import('./server/records.ts'),
+          ])
           if (url === '/api/verify' || url === '/api/admin' || url === '/api/staff') {
+            const route = url === '/api/admin' ? 'admin' : url === '/api/staff' ? 'staff' : 'verify'
+            const routeUrl = new URL(`./server/routes/${route}.ts`, import.meta.url)
+            const { default: handler } = await import(routeUrl.href) as {
+              default: (request: { method?: string; body: unknown; headers: IncomingMessage['headers']; on: () => void }, response: { setHeader: () => void; status: (code: number) => { json: (data: unknown) => void }; json: (data: unknown) => void }) => Promise<void>
+            }
             const raw = await readBody(request)
             const body = raw ? JSON.parse(raw) as unknown : null
             let statusCode = 200
@@ -54,7 +58,6 @@ function localApi(): Plugin {
                 payload = data
               },
             }
-            const handler = url === '/api/admin' ? adminHandler : url === '/api/staff' ? staffHandler : verifyHandler
             await handler({
               method: request.method,
               body,
@@ -67,8 +70,8 @@ function localApi(): Plugin {
           }
           const body = JSON.parse(await readBody(request) || 'null') as {
             action?: string
-            reservation?: ReservationRecord
-            quote?: QuoteRecord
+            reservation?: Parameters<typeof storeReservation>[0]
+            quote?: Parameters<typeof storeQuote>[0]
           }
           if (url === '/api/email') {
             const mail = parseMailRequest(body)

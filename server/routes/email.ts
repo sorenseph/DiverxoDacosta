@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { deliverMail, parseMailRequest } from '../server/mail'
+import { deliverMail, parseMailRequest } from '../mail'
 
 interface NodeResponse {
   status: (code: number) => NodeResponse
